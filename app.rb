@@ -3,33 +3,28 @@ require_relative 'time_formatter'
 class App
 
   def call(env)
-    @request = Rack::Request.new(env)
-    response.finish
+    if env["PATH_INFO"] == '/time'
+      handle_request(env["QUERY_STRING"])
+    else
+      response(404, "Wrong path")
+    end
   end
 
-  private
-
-  def response
-    status, body = parse_request
-    Rack::Response.new(body, status, headers)
+  def response(status, body)
+    Rack::Response.new(body, status, headers).finish
   end
 
   def headers
     { 'Content-Type' => 'text/plain; charset=utf-8' }
   end
 
-  def parse_request
-    if @request.path_info == '/time'
-      format_time
+  def handle_request(params)
+    tf = TimeFormatter.new(params)
+    tf.call
+    if tf.success?
+      response(200, tf.time_string)
     else
-      [404, ["Not Found"]]
+      response(400, tf.invalid_string)
     end
-  end
-
-  def format_time
-    return [400, ["Bad request"]] unless @request.query_string =~ /format=.+/ 
-    
-    formatted = TimeFormatter.new(@request.query_string).call
-    [formatted.first ? 200 : 400, [formatted.last]]
   end
 end

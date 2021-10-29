@@ -20,13 +20,10 @@ class TimeFormatter
   def call
     date_params = @params.split('=').last.split('%2C') 
     @defined_formats, @undefined_formats = date_params.partition { |dp| FORMAT_DIRECTIVES.keys.include?(dp) }
-    success? ? [true, time_string] : [false, invalid_string]
   end
 
-  private
-  
   def success?
-    @undefined_formats.empty?
+    field_name_valid? && @undefined_formats.empty?
   end
 
   def time_string
@@ -34,7 +31,14 @@ class TimeFormatter
   end
 
   def invalid_string
+    return 'Bad request' unless field_name_valid?
     "Unknown time format [#{@undefined_formats.join(', ')}]"
+  end
+
+  private
+
+  def field_name_valid?
+    @params.split('=').first == 'format'
   end
 end
 
