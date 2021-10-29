@@ -2,7 +2,6 @@
 
 class TimeFormatter
 
-  DATE_PARAMS = %w[year month day hour minute second]
   FORMAT_DIRECTIVES = {
                         "year"    => "%Y",
                         "month"   => "%m",
@@ -11,34 +10,31 @@ class TimeFormatter
                         "minute"  => "%M",
                         "second"  => "%S"
                       }
-  
-  attr_reader :response
 
   def initialize(params)
     @params = params
+    @defined_formats = []
     @undefined_formats = []
-    @response = {formatted_date: "", errors: ""}
   end
 
   def call
-    date_params = @params.split('=').last.split('%2C')
-
-    formatted = []
-    undefined_formats = []
-    
-    date_params.each do |dp| 
-      if DATE_PARAMS.include?(dp)
-        formatted << Time.now.strftime(FORMAT_DIRECTIVES[dp])
-      else
-        undefined_formats << dp
-      end
-    end
-    
-    if undefined_formats.any?
-      @response[:errors] = "Unknown time format [#{undefined_formats.join(', ')}]"
-    else
-      @response[:formatted_date] = formatted.join('-')
-    end
+    date_params = @params.split('=').last.split('%2C') 
+    @defined_formats, @undefined_formats = date_params.partition { |dp| FORMAT_DIRECTIVES.keys.include?(dp) }
+    success? ? [true, time_string] : [false, invalid_string]
   end
 
+  private
+  
+  def success?
+    @undefined_formats.empty?
+  end
+
+  def time_string
+    Time.now.strftime(FORMAT_DIRECTIVES.values_at(*@defined_formats).join('-'))
+  end
+
+  def invalid_string
+    "Unknown time format [#{@undefined_formats.join(', ')}]"
+  end
 end
+
